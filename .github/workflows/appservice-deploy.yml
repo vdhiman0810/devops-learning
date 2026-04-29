@@ -104,6 +104,17 @@ jobs:
               --identities $UAMI_RESOURCE_ID
           fi
 
+      - name: Configure dev slot to use UAMI for ACR pull
+        run: |
+          az resource update \
+            --resource-group $RESOURCE_GROUP \
+            --namespace Microsoft.Web \
+            --resource-type config \
+            --parent sites/$WEBAPP_NAME/slots/dev \
+            --name web \
+            --set properties.acrUseManagedIdentityCreds=true \
+            --set properties.acrUserManagedIdentityID=$UAMI_CLIENT_ID
+
       - name: Show dev slot identity
         run: |
           az webapp identity show \
@@ -112,13 +123,16 @@ jobs:
             --slot dev \
             --output json
 
-      - name: Configure dev slot to use UAMI for ACR pull
+      - name: Show dev slot ACR MI config
         run: |
-          az webapp config set \
-            --name $WEBAPP_NAME \
+          az resource show \
             --resource-group $RESOURCE_GROUP \
-            --slot dev \
-            --generic-configurations "{\"acrUseManagedIdentityCreds\": true, \"acrUserManagedIdentityID\": \"$UAMI_CLIENT_ID\"}"
+            --namespace Microsoft.Web \
+            --resource-type config \
+            --parent sites/$WEBAPP_NAME/slots/dev \
+            --name web \
+            --query "properties.{acrUseManagedIdentityCreds:acrUseManagedIdentityCreds,acrUserManagedIdentityID:acrUserManagedIdentityID}" \
+            -o json
 
       - name: Apply container image to dev slot
         run: |
@@ -175,6 +189,17 @@ jobs:
               --identities $UAMI_RESOURCE_ID
           fi
 
+      - name: Configure qa slot to use UAMI for ACR pull
+        run: |
+          az resource update \
+            --resource-group $RESOURCE_GROUP \
+            --namespace Microsoft.Web \
+            --resource-type config \
+            --parent sites/$WEBAPP_NAME/slots/qa \
+            --name web \
+            --set properties.acrUseManagedIdentityCreds=true \
+            --set properties.acrUserManagedIdentityID=$UAMI_CLIENT_ID
+
       - name: Show qa slot identity
         run: |
           az webapp identity show \
@@ -183,13 +208,16 @@ jobs:
             --slot qa \
             --output json
 
-      - name: Configure qa slot to use UAMI for ACR pull
+      - name: Show qa slot ACR MI config
         run: |
-          az webapp config set \
-            --name $WEBAPP_NAME \
+          az resource show \
             --resource-group $RESOURCE_GROUP \
-            --slot qa \
-            --generic-configurations "{\"acrUseManagedIdentityCreds\": true, \"acrUserManagedIdentityID\": \"$UAMI_CLIENT_ID\"}"
+            --namespace Microsoft.Web \
+            --resource-type config \
+            --parent sites/$WEBAPP_NAME/slots/qa \
+            --name web \
+            --query "properties.{acrUseManagedIdentityCreds:acrUseManagedIdentityCreds,acrUserManagedIdentityID:acrUserManagedIdentityID}" \
+            -o json
 
       - name: Apply container image to qa slot
         run: |
@@ -246,6 +274,17 @@ jobs:
               --identities $UAMI_RESOURCE_ID
           fi
 
+      - name: Configure preprod slot to use UAMI for ACR pull
+        run: |
+          az resource update \
+            --resource-group $RESOURCE_GROUP \
+            --namespace Microsoft.Web \
+            --resource-type config \
+            --parent sites/$WEBAPP_NAME/slots/preprod \
+            --name web \
+            --set properties.acrUseManagedIdentityCreds=true \
+            --set properties.acrUserManagedIdentityID=$UAMI_CLIENT_ID
+
       - name: Show preprod slot identity
         run: |
           az webapp identity show \
@@ -254,13 +293,16 @@ jobs:
             --slot preprod \
             --output json
 
-      - name: Configure preprod slot to use UAMI for ACR pull
+      - name: Show preprod slot ACR MI config
         run: |
-          az webapp config set \
-            --name $WEBAPP_NAME \
+          az resource show \
             --resource-group $RESOURCE_GROUP \
-            --slot preprod \
-            --generic-configurations "{\"acrUseManagedIdentityCreds\": true, \"acrUserManagedIdentityID\": \"$UAMI_CLIENT_ID\"}"
+            --namespace Microsoft.Web \
+            --resource-type config \
+            --parent sites/$WEBAPP_NAME/slots/preprod \
+            --name web \
+            --query "properties.{acrUseManagedIdentityCreds:acrUseManagedIdentityCreds,acrUserManagedIdentityID:acrUserManagedIdentityID}" \
+            -o json
 
       - name: Apply container image to preprod slot
         run: |
@@ -307,6 +349,17 @@ jobs:
               --identities $UAMI_RESOURCE_ID
           fi
 
+      - name: Configure production app to use UAMI for ACR pull
+        run: |
+          az resource update \
+            --resource-group $RESOURCE_GROUP \
+            --namespace Microsoft.Web \
+            --resource-type config \
+            --parent sites/$WEBAPP_NAME \
+            --name web \
+            --set properties.acrUseManagedIdentityCreds=true \
+            --set properties.acrUserManagedIdentityID=$UAMI_CLIENT_ID
+
       - name: Show production app identity
         run: |
           az webapp identity show \
@@ -314,12 +367,16 @@ jobs:
             --resource-group $RESOURCE_GROUP \
             --output json
 
-      - name: Configure production app to use UAMI for ACR pull
+      - name: Show production app ACR MI config
         run: |
-          az webapp config set \
-            --name $WEBAPP_NAME \
+          az resource show \
             --resource-group $RESOURCE_GROUP \
-            --generic-configurations "{\"acrUseManagedIdentityCreds\": true, \"acrUserManagedIdentityID\": \"$UAMI_CLIENT_ID\"}"
+            --namespace Microsoft.Web \
+            --resource-type config \
+            --parent sites/$WEBAPP_NAME \
+            --name web \
+            --query "properties.{acrUseManagedIdentityCreds:acrUseManagedIdentityCreds,acrUserManagedIdentityID:acrUserManagedIdentityID}" \
+            -o json
 
       - name: Swap preprod to production
         run: |
