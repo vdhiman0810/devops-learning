@@ -60,8 +60,16 @@ jobs:
           kubectl apply --dry-run=client -f infra/aks/simple-web/prod/deployment.yaml
           kubectl apply --dry-run=client -f infra/aks/simple-web/prod/service.yaml
 
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: ACR login
+        run: az acr login --name $ACR_NAME
+
       - name: Run Trivy image scan
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image_tag }}
           format: table
