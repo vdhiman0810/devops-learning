@@ -45,6 +45,26 @@ jobs:
       - name: Push image
         run: docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
 
+      - name: Delete older ACR image tags and keep current one
+        shell: bash
+        run: |
+          set -e
+          TAGS=$(az acr repository show-tags \
+            --name $ACR_NAME \
+            --repository $IMAGE_NAME \
+            --orderby time_desc \
+            --output tsv)
+
+          for tag in $TAGS; do
+            if [ "$tag" != "${{ github.sha }}" ]; then
+              echo "Deleting old tag: $tag"
+              az acr repository delete \
+                --name $ACR_NAME \
+                --image $IMAGE_NAME:$tag \
+                --yes
+            fi
+          done
+
   deploy-dev:
     needs: build
     runs-on: ubuntu-latest
