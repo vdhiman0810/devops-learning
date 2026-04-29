@@ -12,6 +12,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ github.sha }}
 
     steps:
       - name: Checkout
@@ -36,10 +38,10 @@ jobs:
         run: az acr login --name $ACR_NAME
 
       - name: Build image
-        run: docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:latest ./apps/simple-web
+        run: docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }} ./apps/simple-web
 
       - name: Push image
-        run: docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:latest
+        run: docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
 
   deploy-dev:
     needs: build
@@ -64,7 +66,7 @@ jobs:
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --slot dev \
-            --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:latest \
+            --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ needs.build.outputs.image_tag }} \
             --container-registry-url https://$ACR_NAME.azurecr.io
 
       - name: Enable managed identity image pull on dev slot
@@ -100,7 +102,7 @@ jobs:
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --slot qa \
-            --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:latest \
+            --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ needs.build.outputs.image_tag }} \
             --container-registry-url https://$ACR_NAME.azurecr.io
 
       - name: Enable managed identity image pull on qa slot
@@ -136,7 +138,7 @@ jobs:
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --slot preprod \
-            --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:latest \
+            --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ needs.build.outputs.image_tag }} \
             --container-registry-url https://$ACR_NAME.azurecr.io
 
       - name: Enable managed identity image pull on preprod slot
