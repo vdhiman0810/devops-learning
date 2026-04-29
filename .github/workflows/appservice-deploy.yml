@@ -88,13 +88,14 @@ jobs:
         shell: bash
         run: |
           set -e
-          CURRENT_IDS=$(az webapp identity show \
+          EXISTS=$(az webapp identity show \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --slot dev \
-            --query "userAssignedIdentities | keys(@)" -o tsv 2>/dev/null || true)
+            --query "userAssignedIdentities.\"$UAMI_RESOURCE_ID\"" \
+            -o tsv 2>/dev/null || true)
 
-          if echo "$CURRENT_IDS" | grep -q "$UAMI_RESOURCE_ID"; then
+          if [ -n "$EXISTS" ]; then
             echo "UAMI already attached to dev slot."
           else
             az webapp identity assign \
@@ -173,13 +174,14 @@ jobs:
         shell: bash
         run: |
           set -e
-          CURRENT_IDS=$(az webapp identity show \
+          EXISTS=$(az webapp identity show \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --slot qa \
-            --query "userAssignedIdentities | keys(@)" -o tsv 2>/dev/null || true)
+            --query "userAssignedIdentities.\"$UAMI_RESOURCE_ID\"" \
+            -o tsv 2>/dev/null || true)
 
-          if echo "$CURRENT_IDS" | grep -q "$UAMI_RESOURCE_ID"; then
+          if [ -n "$EXISTS" ]; then
             echo "UAMI already attached to qa slot."
           else
             az webapp identity assign \
@@ -258,13 +260,14 @@ jobs:
         shell: bash
         run: |
           set -e
-          CURRENT_IDS=$(az webapp identity show \
+          EXISTS=$(az webapp identity show \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --slot preprod \
-            --query "userAssignedIdentities | keys(@)" -o tsv 2>/dev/null || true)
+            --query "userAssignedIdentities.\"$UAMI_RESOURCE_ID\"" \
+            -o tsv 2>/dev/null || true)
 
-          if echo "$CURRENT_IDS" | grep -q "$UAMI_RESOURCE_ID"; then
+          if [ -n "$EXISTS" ]; then
             echo "UAMI already attached to preprod slot."
           else
             az webapp identity assign \
@@ -335,12 +338,13 @@ jobs:
         shell: bash
         run: |
           set -e
-          CURRENT_IDS=$(az webapp identity show \
+          EXISTS=$(az webapp identity show \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
-            --query "userAssignedIdentities | keys(@)" -o tsv 2>/dev/null || true)
+            --query "userAssignedIdentities.\"$UAMI_RESOURCE_ID\"" \
+            -o tsv 2>/dev/null || true)
 
-          if echo "$CURRENT_IDS" | grep -q "$UAMI_RESOURCE_ID"; then
+          if [ -n "$EXISTS" ]; then
             echo "UAMI already attached to production app."
           else
             az webapp identity assign \
