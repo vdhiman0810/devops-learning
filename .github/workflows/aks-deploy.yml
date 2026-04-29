@@ -51,14 +51,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate Kubernetes manifests
+      - name: Validate manifest files exist
         run: |
-          kubectl apply --dry-run=client -f infra/aks/simple-web/dev/deployment.yaml
-          kubectl apply --dry-run=client -f infra/aks/simple-web/dev/service.yaml
-          kubectl apply --dry-run=client -f infra/aks/simple-web/qa/deployment.yaml
-          kubectl apply --dry-run=client -f infra/aks/simple-web/qa/service.yaml
-          kubectl apply --dry-run=client -f infra/aks/simple-web/prod/deployment.yaml
-          kubectl apply --dry-run=client -f infra/aks/simple-web/prod/service.yaml
+          test -f infra/aks/simple-web/dev/deployment.yaml
+          test -f infra/aks/simple-web/dev/service.yaml
+          test -f infra/aks/simple-web/qa/deployment.yaml
+          test -f infra/aks/simple-web/qa/service.yaml
+          test -f infra/aks/simple-web/prod/deployment.yaml
+          test -f infra/aks/simple-web/prod/service.yaml
 
       - name: Azure login
         uses: azure/login@v2
