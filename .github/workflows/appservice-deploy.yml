@@ -8,8 +8,6 @@ env:
   IMAGE_NAME: simple-web
   WEBAPP_NAME: devops-learning-py01
   RESOURCE_GROUP: rg-devops-learning
-
-  # Replace these with your real user-assigned managed identity values.
   UAMI_RESOURCE_ID: /subscriptions/993fd679-de13-47d9-82e9-c90641b65649/resourceGroups/rg-devops-learning/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-appservice-acr-pull
   UAMI_CLIENT_ID: REPLACE_WITH_UAMI_CLIENT_ID
 
@@ -74,13 +72,13 @@ jobs:
             --slot dev \
             --identities $UAMI_RESOURCE_ID
 
-      - name: Remove system-assigned identity from dev slot if present
+      - name: Show dev slot identity
         run: |
-          az webapp identity remove \
+          az webapp identity show \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --slot dev \
-            --identities [system] || true
+            --output json
 
       - name: Configure dev slot to use UAMI for ACR pull
         run: |
@@ -90,7 +88,7 @@ jobs:
             --slot dev \
             --generic-configurations "{\"acrUseManagedIdentityCreds\": true, \"acrUserManagedIdentityID\": \"$UAMI_CLIENT_ID\"}"
 
-      - name: Configure dev slot container image
+      - name: Apply container image to dev slot
         run: |
           az webapp config container set \
             --name $WEBAPP_NAME \
@@ -98,6 +96,13 @@ jobs:
             --slot dev \
             --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ needs.build.outputs.image_tag }} \
             --container-registry-url https://$ACR_NAME.azurecr.io
+
+      - name: Restart dev slot
+        run: |
+          az webapp restart \
+            --name $WEBAPP_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --slot dev
 
   deploy-qa:
     needs: [build, deploy-dev]
@@ -126,13 +131,13 @@ jobs:
             --slot qa \
             --identities $UAMI_RESOURCE_ID
 
-      - name: Remove system-assigned identity from qa slot if present
+      - name: Show qa slot identity
         run: |
-          az webapp identity remove \
+          az webapp identity show \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --slot qa \
-            --identities [system] || true
+            --output json
 
       - name: Configure qa slot to use UAMI for ACR pull
         run: |
@@ -142,7 +147,7 @@ jobs:
             --slot qa \
             --generic-configurations "{\"acrUseManagedIdentityCreds\": true, \"acrUserManagedIdentityID\": \"$UAMI_CLIENT_ID\"}"
 
-      - name: Configure qa slot container image
+      - name: Apply container image to qa slot
         run: |
           az webapp config container set \
             --name $WEBAPP_NAME \
@@ -150,6 +155,13 @@ jobs:
             --slot qa \
             --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ needs.build.outputs.image_tag }} \
             --container-registry-url https://$ACR_NAME.azurecr.io
+
+      - name: Restart qa slot
+        run: |
+          az webapp restart \
+            --name $WEBAPP_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --slot qa
 
   deploy-preprod:
     needs: [build, deploy-qa]
@@ -178,13 +190,13 @@ jobs:
             --slot preprod \
             --identities $UAMI_RESOURCE_ID
 
-      - name: Remove system-assigned identity from preprod slot if present
+      - name: Show preprod slot identity
         run: |
-          az webapp identity remove \
+          az webapp identity show \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --slot preprod \
-            --identities [system] || true
+            --output json
 
       - name: Configure preprod slot to use UAMI for ACR pull
         run: |
@@ -194,7 +206,7 @@ jobs:
             --slot preprod \
             --generic-configurations "{\"acrUseManagedIdentityCreds\": true, \"acrUserManagedIdentityID\": \"$UAMI_CLIENT_ID\"}"
 
-      - name: Configure preprod slot container image
+      - name: Apply container image to preprod slot
         run: |
           az webapp config container set \
             --name $WEBAPP_NAME \
@@ -202,6 +214,13 @@ jobs:
             --slot preprod \
             --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ needs.build.outputs.image_tag }} \
             --container-registry-url https://$ACR_NAME.azurecr.io
+
+      - name: Restart preprod slot
+        run: |
+          az webapp restart \
+            --name $WEBAPP_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --slot preprod
 
   swap-prod:
     needs: [build, deploy-preprod]
@@ -221,12 +240,12 @@ jobs:
             --resource-group $RESOURCE_GROUP \
             --identities $UAMI_RESOURCE_ID
 
-      - name: Remove system-assigned identity from production app if present
+      - name: Show production app identity
         run: |
-          az webapp identity remove \
+          az webapp identity show \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
-            --identities [system] || true
+            --output json
 
       - name: Configure production app to use UAMI for ACR pull
         run: |
