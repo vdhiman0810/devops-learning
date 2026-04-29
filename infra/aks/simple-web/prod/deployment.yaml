@@ -8,7 +8,7 @@ metadata:
   labels:
     app: simple-web
   name: simple-web
-  namespace: dev
+  namespace: prod
   resourceVersion: "9113"
   uid: bbb325d7-7637-4af1-8547-343b36a6f761
 spec:
@@ -33,7 +33,7 @@ spec:
         imagePullPolicy: IfNotPresent
         name: simple-web
         resources: {}
-        terminationMessagePath: /dev/termination-log
+        terminationMessagePath: /prod/termination-log
         terminationMessagePolicy: File
       dnsPolicy: ClusterFirst
       restartPolicy: Always

@@ -7,7 +7,7 @@ metadata:
   labels:
     app: simple-web
   name: simple-web
-  namespace: dev
+  namespace: prod
   resourceVersion: "9210"
   uid: 9d9263d0-b202-48f1-b8d3-1a32ddf5eb77
 spec:
