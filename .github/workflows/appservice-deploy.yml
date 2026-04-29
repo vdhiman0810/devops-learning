@@ -57,7 +57,6 @@ jobs:
 
           for tag in $TAGS; do
             if [ "$tag" != "${{ github.sha }}" ]; then
-              echo "Deleting old tag: $tag"
               az acr repository delete \
                 --name $ACR_NAME \
                 --image $IMAGE_NAME:$tag \
@@ -69,7 +68,6 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment: dev
-
     steps:
       - name: Azure login
         uses: azure/login@v2
@@ -87,7 +85,6 @@ jobs:
       - name: Ensure shared UAMI is attached to dev slot
         shell: bash
         run: |
-          set -e
           EXISTS=$(az webapp identity show \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
@@ -95,9 +92,7 @@ jobs:
             --query "userAssignedIdentities.\"$UAMI_RESOURCE_ID\"" \
             -o tsv 2>/dev/null || true)
 
-          if [ -n "$EXISTS" ]; then
-            echo "UAMI already attached to dev slot."
-          else
+          if [ -z "$EXISTS" ]; then
             az webapp identity assign \
               --name $WEBAPP_NAME \
               --resource-group $RESOURCE_GROUP \
@@ -105,35 +100,14 @@ jobs:
               --identities $UAMI_RESOURCE_ID
           fi
 
-      - name: Configure dev slot to use UAMI for ACR pull
+      - name: Configure dev slot ACR managed identity
         run: |
-          az resource update \
-            --resource-group $RESOURCE_GROUP \
-            --namespace Microsoft.Web \
-            --resource-type config \
-            --parent sites/$WEBAPP_NAME/slots/dev \
-            --name web \
-            --set properties.acrUseManagedIdentityCreds=true \
-            --set properties.acrUserManagedIdentityID=$UAMI_CLIENT_ID
-
-      - name: Show dev slot identity
-        run: |
-          az webapp identity show \
+          az webapp config set \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --slot dev \
-            --output json
-
-      - name: Show dev slot ACR MI config
-        run: |
-          az resource show \
-            --resource-group $RESOURCE_GROUP \
-            --namespace Microsoft.Web \
-            --resource-type config \
-            --parent sites/$WEBAPP_NAME/slots/dev \
-            --name web \
-            --query "properties.{acrUseManagedIdentityCreds:acrUseManagedIdentityCreds,acrUserManagedIdentityID:acrUserManagedIdentityID}" \
-            -o json
+            --acr-use-identity true \
+            --acr-identity $UAMI_CLIENT_ID
 
       - name: Apply container image to dev slot
         run: |
@@ -143,6 +117,22 @@ jobs:
             --slot dev \
             --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ needs.build.outputs.image_tag }} \
             --container-registry-url https://$ACR_NAME.azurecr.io
+
+      - name: Show dev slot identity
+        run: |
+          az webapp identity show \
+            --name $WEBAPP_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --slot dev \
+            -o json
+
+      - name: Show dev slot config
+        run: |
+          az webapp config show \
+            --name $WEBAPP_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --slot dev \
+            -o json
 
       - name: Restart dev slot
         run: |
@@ -155,7 +145,6 @@ jobs:
     needs: [build, deploy-dev]
     runs-on: ubuntu-latest
     environment: qa
-
     steps:
       - name: Azure login
         uses: azure/login@v2
@@ -173,7 +162,6 @@ jobs:
       - name: Ensure shared UAMI is attached to qa slot
         shell: bash
         run: |
-          set -e
           EXISTS=$(az webapp identity show \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
@@ -181,9 +169,7 @@ jobs:
             --query "userAssignedIdentities.\"$UAMI_RESOURCE_ID\"" \
             -o tsv 2>/dev/null || true)
 
-          if [ -n "$EXISTS" ]; then
-            echo "UAMI already attached to qa slot."
-          else
+          if [ -z "$EXISTS" ]; then
             az webapp identity assign \
               --name $WEBAPP_NAME \
               --resource-group $RESOURCE_GROUP \
@@ -191,35 +177,14 @@ jobs:
               --identities $UAMI_RESOURCE_ID
           fi
 
-      - name: Configure qa slot to use UAMI for ACR pull
+      - name: Configure qa slot ACR managed identity
         run: |
-          az resource update \
-            --resource-group $RESOURCE_GROUP \
-            --namespace Microsoft.Web \
-            --resource-type config \
-            --parent sites/$WEBAPP_NAME/slots/qa \
-            --name web \
-            --set properties.acrUseManagedIdentityCreds=true \
-            --set properties.acrUserManagedIdentityID=$UAMI_CLIENT_ID
-
-      - name: Show qa slot identity
-        run: |
-          az webapp identity show \
+          az webapp config set \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --slot qa \
-            --output json
-
-      - name: Show qa slot ACR MI config
-        run: |
-          az resource show \
-            --resource-group $RESOURCE_GROUP \
-            --namespace Microsoft.Web \
-            --resource-type config \
-            --parent sites/$WEBAPP_NAME/slots/qa \
-            --name web \
-            --query "properties.{acrUseManagedIdentityCreds:acrUseManagedIdentityCreds,acrUserManagedIdentityID:acrUserManagedIdentityID}" \
-            -o json
+            --acr-use-identity true \
+            --acr-identity $UAMI_CLIENT_ID
 
       - name: Apply container image to qa slot
         run: |
@@ -229,6 +194,22 @@ jobs:
             --slot qa \
             --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ needs.build.outputs.image_tag }} \
             --container-registry-url https://$ACR_NAME.azurecr.io
+
+      - name: Show qa slot identity
+        run: |
+          az webapp identity show \
+            --name $WEBAPP_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --slot qa \
+            -o json
+
+      - name: Show qa slot config
+        run: |
+          az webapp config show \
+            --name $WEBAPP_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --slot qa \
+            -o json
 
       - name: Restart qa slot
         run: |
@@ -241,7 +222,6 @@ jobs:
     needs: [build, deploy-qa]
     runs-on: ubuntu-latest
     environment: preprod
-
     steps:
       - name: Azure login
         uses: azure/login@v2
@@ -259,7 +239,6 @@ jobs:
       - name: Ensure shared UAMI is attached to preprod slot
         shell: bash
         run: |
-          set -e
           EXISTS=$(az webapp identity show \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
@@ -267,9 +246,7 @@ jobs:
             --query "userAssignedIdentities.\"$UAMI_RESOURCE_ID\"" \
             -o tsv 2>/dev/null || true)
 
-          if [ -n "$EXISTS" ]; then
-            echo "UAMI already attached to preprod slot."
-          else
+          if [ -z "$EXISTS" ]; then
             az webapp identity assign \
               --name $WEBAPP_NAME \
               --resource-group $RESOURCE_GROUP \
@@ -277,35 +254,14 @@ jobs:
               --identities $UAMI_RESOURCE_ID
           fi
 
-      - name: Configure preprod slot to use UAMI for ACR pull
+      - name: Configure preprod slot ACR managed identity
         run: |
-          az resource update \
-            --resource-group $RESOURCE_GROUP \
-            --namespace Microsoft.Web \
-            --resource-type config \
-            --parent sites/$WEBAPP_NAME/slots/preprod \
-            --name web \
-            --set properties.acrUseManagedIdentityCreds=true \
-            --set properties.acrUserManagedIdentityID=$UAMI_CLIENT_ID
-
-      - name: Show preprod slot identity
-        run: |
-          az webapp identity show \
+          az webapp config set \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --slot preprod \
-            --output json
-
-      - name: Show preprod slot ACR MI config
-        run: |
-          az resource show \
-            --resource-group $RESOURCE_GROUP \
-            --namespace Microsoft.Web \
-            --resource-type config \
-            --parent sites/$WEBAPP_NAME/slots/preprod \
-            --name web \
-            --query "properties.{acrUseManagedIdentityCreds:acrUseManagedIdentityCreds,acrUserManagedIdentityID:acrUserManagedIdentityID}" \
-            -o json
+            --acr-use-identity true \
+            --acr-identity $UAMI_CLIENT_ID
 
       - name: Apply container image to preprod slot
         run: |
@@ -315,6 +271,22 @@ jobs:
             --slot preprod \
             --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ needs.build.outputs.image_tag }} \
             --container-registry-url https://$ACR_NAME.azurecr.io
+
+      - name: Show preprod slot identity
+        run: |
+          az webapp identity show \
+            --name $WEBAPP_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --slot preprod \
+            -o json
+
+      - name: Show preprod slot config
+        run: |
+          az webapp config show \
+            --name $WEBAPP_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --slot preprod \
+            -o json
 
       - name: Restart preprod slot
         run: |
@@ -327,7 +299,6 @@ jobs:
     needs: [build, deploy-preprod]
     runs-on: ubuntu-latest
     environment: prod
-
     steps:
       - name: Azure login
         uses: azure/login@v2
@@ -337,49 +308,39 @@ jobs:
       - name: Ensure shared UAMI is attached to production app
         shell: bash
         run: |
-          set -e
           EXISTS=$(az webapp identity show \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --query "userAssignedIdentities.\"$UAMI_RESOURCE_ID\"" \
             -o tsv 2>/dev/null || true)
 
-          if [ -n "$EXISTS" ]; then
-            echo "UAMI already attached to production app."
-          else
+          if [ -z "$EXISTS" ]; then
             az webapp identity assign \
               --name $WEBAPP_NAME \
               --resource-group $RESOURCE_GROUP \
               --identities $UAMI_RESOURCE_ID
           fi
 
-      - name: Configure production app to use UAMI for ACR pull
+      - name: Configure production ACR managed identity
         run: |
-          az resource update \
+          az webapp config set \
+            --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
-            --namespace Microsoft.Web \
-            --resource-type config \
-            --parent sites/$WEBAPP_NAME \
-            --name web \
-            --set properties.acrUseManagedIdentityCreds=true \
-            --set properties.acrUserManagedIdentityID=$UAMI_CLIENT_ID
+            --acr-use-identity true \
+            --acr-identity $UAMI_CLIENT_ID
 
-      - name: Show production app identity
+      - name: Show production identity
         run: |
           az webapp identity show \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
-            --output json
+            -o json
 
-      - name: Show production app ACR MI config
+      - name: Show production config
         run: |
-          az resource show \
+          az webapp config show \
+            --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
-            --namespace Microsoft.Web \
-            --resource-type config \
-            --parent sites/$WEBAPP_NAME \
-            --name web \
-            --query "properties.{acrUseManagedIdentityCreds:acrUseManagedIdentityCreds,acrUserManagedIdentityID:acrUserManagedIdentityID}" \
             -o json
 
       - name: Swap preprod to production
