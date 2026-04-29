@@ -43,11 +43,34 @@ jobs:
       - name: Push image
         run: docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
 
-      - name: Get AKS credentials
-        run: az aks get-credentials --resource-group $RESOURCE_GROUP --name $AKS_NAME --overwrite-existing
+  quality:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Kubernetes manifests
+        run: |
+          kubectl apply --dry-run=client -f infra/aks/simple-web/dev/deployment.yaml
+          kubectl apply --dry-run=client -f infra/aks/simple-web/dev/service.yaml
+          kubectl apply --dry-run=client -f infra/aks/simple-web/qa/deployment.yaml
+          kubectl apply --dry-run=client -f infra/aks/simple-web/qa/service.yaml
+          kubectl apply --dry-run=client -f infra/aks/simple-web/prod/deployment.yaml
+          kubectl apply --dry-run=client -f infra/aks/simple-web/prod/service.yaml
+
+      - name: Run Trivy image scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image_tag }}
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
 
   deploy-dev:
-    needs: build
+    needs: [build, quality]
     runs-on: ubuntu-latest
     environment: dev
 
@@ -74,7 +97,7 @@ jobs:
           kubectl rollout status deployment/simple-web -n dev
 
   deploy-qa:
-    needs: [build, deploy-dev]
+    needs: [build, quality, deploy-dev]
     runs-on: ubuntu-latest
     environment: qa
 
@@ -101,7 +124,7 @@ jobs:
           kubectl rollout status deployment/simple-web -n qa
 
   deploy-prod:
-    needs: [build, deploy-qa]
+    needs: [build, quality, deploy-qa]
     runs-on: ubuntu-latest
     environment: prod
 
