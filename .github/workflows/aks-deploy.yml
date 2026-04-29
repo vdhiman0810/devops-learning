@@ -51,14 +51,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate manifest files exist
-        run: |
-          test -f infra/aks/simple-web/dev/deployment.yaml
-          test -f infra/aks/simple-web/dev/service.yaml
-          test -f infra/aks/simple-web/qa/deployment.yaml
-          test -f infra/aks/simple-web/qa/service.yaml
-          test -f infra/aks/simple-web/prod/deployment.yaml
-          test -f infra/aks/simple-web/prod/service.yaml
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: auto
 
       - name: Azure login
         uses: azure/login@v2
