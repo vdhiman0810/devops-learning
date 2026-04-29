@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: hello-yaml
+  name: hello-yaml
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hello-yaml
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: hello-yaml
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        resources: {}
+status: {}

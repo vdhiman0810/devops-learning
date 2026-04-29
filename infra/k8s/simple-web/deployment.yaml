@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: simple-web
+  name: simple-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simple-web
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: simple-web
+    spec:
+      containers:
+      - image: simple-web:v1
+        name: simple-web
+        resources: {}
+status: {}

@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show repo files
+        run: ls -R
+
+      - name: Verify Dockerfile exists
+        run: test -f apps/simple-web/Dockerfile
+
+      - name: Verify Kubernetes manifests exist
+        run: |
+          test -f infra/k8s/simple-web/deployment.yaml
+          test -f infra/k8s/simple-web/service.yaml
+
+      - name: Verify Helm chart exists
+        run: test -f infra/helm/simple-web/Chart.yaml
