@@ -43,3 +43,11 @@ spec:
               memory: 256Mi
           securityContext:
             allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: app-secret
+              mountPath: /etc/app-secrets
+              readOnly: true
+      volumes:
+        - name: app-secret
+          secret:
+            secretName: simple-web-config
