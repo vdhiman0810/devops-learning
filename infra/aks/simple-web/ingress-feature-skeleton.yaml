@@ -1,0 +1,144 @@
+# Ingress feature skeleton for ingress-nginx on AKS.
+#
+# This file is intentionally verbose and heavily commented.
+# Use it as a reference/template, not as-is for production.
+#
+# Main ideas:
+# - DNS sends traffic to the ingress controller public IP.
+# - Ingress routes host/path traffic to Kubernetes services.
+# - Most advanced behavior is controlled by annotations.
+#
+# Common patterns:
+# - Host-based routing: dev.example.com, qa.example.com, prod.example.com
+# - Path-based routing: /api, /web, /admin
+# - TLS termination: HTTPS ends at ingress, backend service stays HTTP
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: simple-web
+  annotations:
+    # Rewrites the matched path to / before sending it to the backend.
+    # Useful when exposing an app under /dev or /app.
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+
+    # Forces all HTTP requests to redirect to HTTPS.
+    # Useful after TLS is configured.
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+
+    # Adds a permanent redirect to another URL or hostname.
+    # Useful for domain moves.
+    # nginx.ingress.kubernetes.io/permanent-redirect: https://example.com
+
+    # Limits request body size. Helpful for uploads.
+    # nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+    # Backend protocol if your service speaks HTTPS instead of HTTP.
+    # nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+
+    # Enables regex path matching.
+    # Required if you want advanced path captures like /(dev|qa)/(.*)
+    # nginx.ingress.kubernetes.io/use-regex: "true"
+
+    # Enables basic auth using a Kubernetes secret.
+    # Secret should contain an htpasswd-style auth file.
+    # nginx.ingress.kubernetes.io/auth-type: basic
+    # nginx.ingress.kubernetes.io/auth-secret: basic-auth-secret
+    # nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+
+    # Restrict access by source IP ranges.
+    # Good for admin tools or internal-only apps.
+    # nginx.ingress.kubernetes.io/whitelist-source-range: "1.2.3.4/32,10.0.0.0/8"
+
+    # Adds custom response headers.
+    # Secret or ConfigMap pattern is usually cleaner for bigger setups.
+    # nginx.ingress.kubernetes.io/configuration-snippet: |
+    #   add_header X-Environment dev always;
+
+    # Connection/read/send timeout examples.
+    # Useful for slow APIs or large upstream responses.
+    # nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    # nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+
+spec:
+  # Tells Kubernetes which ingress controller should handle this ingress.
+  ingressClassName: nginx
+
+  # TLS block: uncomment when you have a TLS secret.
+  # The secret usually contains tls.crt and tls.key.
+  #
+  # tls:
+  #   - hosts:
+  #       - dev.simple-web.local
+  #     secretName: dev-simple-web-tls
+
+  rules:
+    # Host-based routing example.
+    - host: dev.simple-web.local
+      http:
+        paths:
+          # Simple root path.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: simple-web
+                port:
+                  number: 80
+
+          # Path-based routing example.
+          # Requests to /api go to a different backend service.
+          # - path: /api
+          #   pathType: Prefix
+          #   backend:
+          #     service:
+          #       name: simple-api
+          #       port:
+          #         number: 8080
+
+          # Path-based static app example.
+          # If serving a static app under /dev, you may also need rewrite-target.
+          # - path: /dev
+          #   pathType: Prefix
+          #   backend:
+          #     service:
+          #       name: simple-web
+          #       port:
+          #         number: 80
+
+    # QA host example.
+    # - host: qa.simple-web.local
+    #   http:
+    #     paths:
+    #       - path: /
+    #         pathType: Prefix
+    #         backend:
+    #           service:
+    #             name: simple-web
+    #             port:
+    #               number: 80
+
+    # Prod host example.
+    # - host: prod.simple-web.local
+    #   http:
+    #     paths:
+    #       - path: /
+    #         pathType: Prefix
+    #         backend:
+    #           service:
+    #             name: simple-web
+    #             port:
+    #               number: 80
+
+    # Catch-all hostless rule example.
+    # Use carefully, because it matches requests without a host rule match.
+    # - http:
+    #     paths:
+    #       - path: /
+    #         pathType: Prefix
+    #         backend:
+    #           service:
+    #             name: default-web
+    #             port:
+    #               number: 80
