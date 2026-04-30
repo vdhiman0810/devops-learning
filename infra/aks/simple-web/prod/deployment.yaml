@@ -14,9 +14,32 @@ spec:
       labels:
         app: simple-web
     spec:
+      securityContext:
+        runAsNonRoot: true
       containers:
         - name: simple-web
           image: devopslearningacr01.azurecr.io/simple-web:PLACEHOLDER
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
